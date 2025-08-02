@@ -5,6 +5,9 @@ import coralSprite from '@/assets/coral.png';
 import brazilWaters from '@/assets/brazil-waters.png';
 import atlanticWaters from '@/assets/atlantic-waters.png';
 import africaWaters from '@/assets/africa-waters.png';
+import indiaWaters from '@/assets/india-waters.png';
+import indonesiaWaters from '@/assets/indonesia-waters.png';
+import australiaWaters from '@/assets/australia-waters.png';
 import MiniMap from './MiniMap';
 import InfoBalloon from './InfoBalloon';
 
@@ -15,18 +18,25 @@ interface WhaleGameProps {
 class GameScene extends Phaser.Scene {
   private whale!: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
+  private aKey!: Phaser.Input.Keyboard.Key;
   private isMoving = false;
+  private corals: Phaser.GameObjects.Image[] = [];
+  private nearestCoral: Phaser.GameObjects.Image | null = null;
   private camera!: Phaser.Cameras.Scene2D.Camera;
   private backgrounds: Phaser.GameObjects.TileSprite[] = [];
   private currentZone = 0;
-  private totalDistance = 6000; // Total migration distance in pixels
+  private totalDistance = 12000; // Total migration distance in pixels
   private milestones: { distance: number; message: string; triggered: boolean }[] = [];
+  private coralInfo: { [key: string]: { name: string; info: string; country: string } } = {};
   
   // Zones configuration
   private zones = [
     { name: 'Brasil', start: 0, end: 2000, background: 'brazil-waters' },
     { name: 'Atlântico Sul', start: 2000, end: 4000, background: 'atlantic-waters' },
-    { name: 'África', start: 4000, end: 6000, background: 'africa-waters' }
+    { name: 'África', start: 4000, end: 6000, background: 'africa-waters' },
+    { name: 'Oceano Índico', start: 6000, end: 8000, background: 'india-waters' },
+    { name: 'Indonésia', start: 8000, end: 10000, background: 'indonesia-waters' },
+    { name: 'Austrália', start: 10000, end: 12000, background: 'australia-waters' }
   ];
 
   constructor() {
@@ -36,10 +46,22 @@ class GameScene extends Phaser.Scene {
     this.milestones = [
       { distance: 1800, message: 'Deixando as águas brasileiras...', triggered: false },
       { distance: 2200, message: 'Entrando no Atlântico Sul - águas profundas à frente!', triggered: false },
-      { distance: 3800, message: 'Meio do oceano - você está fazendo um ótimo progresso!', triggered: false },
       { distance: 4200, message: 'Aproximando-se das águas africanas!', triggered: false },
-      { distance: 5800, message: 'Chegando ao destino - costa da África!', triggered: false }
+      { distance: 6200, message: 'Entrando no Oceano Índico - águas tropicais!', triggered: false },
+      { distance: 8200, message: 'Chegando às águas indonésias - lar de corais únicos!', triggered: false },
+      { distance: 10200, message: 'Aproximando-se da Austrália - Grande Barreira de Corais!', triggered: false },
+      { distance: 11800, message: 'Chegada final - Austrália alcançada!', triggered: false }
     ];
+
+    // Initialize coral information
+    this.coralInfo = {
+      'coral-brasil': { name: 'Coral Cérebro', info: 'Coral típico das águas brasileiras, importante para a biodiversidade marinha.', country: 'Brasil' },
+      'coral-atlantico': { name: 'Coral Atlântico', info: 'Coral resistente das águas profundas do Atlântico Sul.', country: 'Atlântico Sul' },
+      'coral-africa': { name: 'Coral Africano', info: 'Coral colorido da costa africana, lar de muitas espécies tropicais.', country: 'África' },
+      'coral-india': { name: 'Coral do Índico', info: 'Coral tropical das águas quentes do Oceano Índico.', country: 'Oceano Índico' },
+      'coral-indonesia': { name: 'Coral Indonésio', info: 'Coral diversificado das águas indonésias, um dos mais ricos em biodiversidade.', country: 'Indonésia' },
+      'coral-australia': { name: 'Coral da Grande Barreira', info: 'Parte da famosa Grande Barreira de Corais da Austrália!', country: 'Austrália' }
+    };
   }
 
   preload() {
@@ -49,6 +71,9 @@ class GameScene extends Phaser.Scene {
     this.load.image('brazil-waters', brazilWaters);
     this.load.image('atlantic-waters', atlanticWaters);
     this.load.image('africa-waters', africaWaters);
+    this.load.image('india-waters', indiaWaters);
+    this.load.image('indonesia-waters', indonesiaWaters);
+    this.load.image('australia-waters', australiaWaters);
   }
 
   create() {
@@ -74,6 +99,7 @@ class GameScene extends Phaser.Scene {
     
     // Set up keyboard controls
     this.cursors = this.input.keyboard!.createCursorKeys();
+    this.aKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A);
 
     // Add floating animation to whale when idle
     this.tweens.add({
@@ -108,15 +134,18 @@ class GameScene extends Phaser.Scene {
   createCorals() {
     // Add corals throughout the migration route
     const coralPositions = [
-      { x: 300, y: 550, scale: 0.8, flip: false },
-      { x: 800, y: 570, scale: 0.6, flip: true },
-      { x: 1500, y: 560, scale: 0.7, flip: false },
-      { x: 2300, y: 580, scale: 0.5, flip: true },
-      { x: 3200, y: 550, scale: 0.9, flip: false },
-      { x: 3800, y: 565, scale: 0.6, flip: true },
-      { x: 4500, y: 575, scale: 0.7, flip: false },
-      { x: 5200, y: 555, scale: 0.8, flip: true },
-      { x: 5800, y: 570, scale: 0.6, flip: false }
+      { x: 300, y: 550, scale: 0.8, flip: false, id: 'coral-brasil' },
+      { x: 1500, y: 560, scale: 0.7, flip: false, id: 'coral-brasil' },
+      { x: 2300, y: 580, scale: 0.5, flip: true, id: 'coral-atlantico' },
+      { x: 3200, y: 550, scale: 0.9, flip: false, id: 'coral-atlantico' },
+      { x: 4500, y: 575, scale: 0.7, flip: false, id: 'coral-africa' },
+      { x: 5200, y: 555, scale: 0.8, flip: true, id: 'coral-africa' },
+      { x: 6500, y: 570, scale: 0.6, flip: false, id: 'coral-india' },
+      { x: 7200, y: 560, scale: 0.8, flip: true, id: 'coral-india' },
+      { x: 8500, y: 580, scale: 0.7, flip: false, id: 'coral-indonesia' },
+      { x: 9200, y: 565, scale: 0.9, flip: true, id: 'coral-indonesia' },
+      { x: 10500, y: 575, scale: 0.8, flip: false, id: 'coral-australia' },
+      { x: 11200, y: 555, scale: 0.7, flip: true, id: 'coral-australia' }
     ];
 
     coralPositions.forEach(pos => {
@@ -124,12 +153,14 @@ class GameScene extends Phaser.Scene {
         .setScale(pos.scale)
         .setFlipX(pos.flip);
       coral.setDepth(-5);
+      coral.setData('coralId', pos.id);
+      this.corals.push(coral);
     });
   }
 
   createBubbles() {
     // Create animated bubbles throughout the route
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 40; i++) {
       const bubble = this.add.circle(
         Phaser.Math.Between(0, this.totalDistance),
         Phaser.Math.Between(400, 600),
@@ -146,6 +177,46 @@ class GameScene extends Phaser.Scene {
         ease: 'Linear',
         delay: Phaser.Math.Between(0, 5000)
       });
+    }
+  }
+
+  checkNearestCoral() {
+    let minDistance = Infinity;
+    let nearest: Phaser.GameObjects.Image | null = null;
+    
+    this.corals.forEach(coral => {
+      const distance = Phaser.Math.Distance.Between(
+        this.whale.x, this.whale.y,
+        coral.x, coral.y
+      );
+      
+      if (distance < 100 && distance < minDistance) {
+        minDistance = distance;
+        nearest = coral;
+      }
+    });
+    
+    this.nearestCoral = nearest;
+    
+    // Visual indicator when near coral
+    this.corals.forEach(coral => {
+      if (coral === nearest) {
+        coral.setTint(0xffff00); // Yellow tint when near
+      } else {
+        coral.clearTint();
+      }
+    });
+  }
+
+  handleCoralInteraction() {
+    if (this.nearestCoral && Phaser.Input.Keyboard.JustDown(this.aKey)) {
+      const coralId = this.nearestCoral.getData('coralId');
+      const coralData = this.coralInfo[coralId];
+      
+      if (coralData) {
+        const message = `🐠 ${coralData.name} (${coralData.country})\n\n${coralData.info}`;
+        this.game.events.emit('milestone', message);
+      }
     }
   }
 
@@ -226,6 +297,8 @@ class GameScene extends Phaser.Scene {
     }
 
     this.checkMilestones();
+    this.checkNearestCoral();
+    this.handleCoralInteraction();
 
     // Emit whale position for mini map
     this.game.events.emit('whalePosition', {
@@ -239,7 +312,7 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
   const gameRef = useRef<HTMLDivElement>(null);
   const phaserGameRef = useRef<Phaser.Game | null>(null);
   const [whalePosition, setWhalePosition] = useState(0);
-  const [totalDistance, setTotalDistance] = useState(6000);
+  const [totalDistance, setTotalDistance] = useState(12000);
   const [balloonMessage, setBalloonMessage] = useState('');
   const [showBalloon, setShowBalloon] = useState(false);
 

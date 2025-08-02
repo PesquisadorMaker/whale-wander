@@ -11,9 +11,12 @@ const MiniMap: React.FC<MiniMapProps> = ({ whalePosition, totalDistance }) => {
   
   // Define zones
   const zones = [
-    { name: 'Brasil', start: 0, end: 33, color: 'bg-emerald-500' },
-    { name: 'Atlântico Sul', start: 33, end: 66, color: 'bg-blue-600' },
-    { name: 'África', start: 66, end: 100, color: 'bg-orange-500' }
+    { name: 'Brasil', start: 0, end: 16.6, color: 'bg-emerald-500' },
+    { name: 'Atlântico Sul', start: 16.6, end: 33.3, color: 'bg-blue-600' },
+    { name: 'África', start: 33.3, end: 50, color: 'bg-orange-500' },
+    { name: 'Oceano Índico', start: 50, end: 66.6, color: 'bg-purple-500' },
+    { name: 'Indonésia', start: 66.6, end: 83.3, color: 'bg-teal-500' },
+    { name: 'Austrália', start: 83.3, end: 100, color: 'bg-red-500' }
   ];
 
   const getCurrentZone = () => {
@@ -58,13 +61,20 @@ const MiniMap: React.FC<MiniMapProps> = ({ whalePosition, totalDistance }) => {
       </div>
 
       {/* Distance markers */}
-      <div className="grid grid-cols-3 gap-1 mt-3 text-xs">
+      <div className="grid grid-cols-2 gap-1 mt-3 text-xs">
         {zones.map((zone, index) => (
           <div key={index} className="text-center">
-            <div className={`w-3 h-3 ${zone.color} rounded-full mx-auto mb-1 opacity-60`} />
-            <p className="text-muted-foreground text-[10px]">{zone.name}</p>
+            <div className={`w-2 h-2 ${zone.color} rounded-full mx-auto mb-1 opacity-60`} />
+            <p className="text-muted-foreground text-[9px]">{zone.name}</p>
           </div>
         ))}
+      </div>
+      
+      {/* Instructions */}
+      <div className="mt-2 pt-2 border-t border-accent/20">
+        <p className="text-muted-foreground text-[9px] text-center">
+          Pressione A próximo aos corais para informações
+        </p>
       </div>
     </div>
   );
