@@ -68,6 +68,11 @@ export default {
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
+			backgroundImage: {
+				'ocean-surface': 'var(--ocean-surface)',
+				'ocean-deep': 'var(--ocean-deep)', 
+				'coral-glow': 'var(--coral-glow)'
+			},
 			keyframes: {
 				'accordion-down': {
 					from: {
@@ -84,11 +89,28 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'swim': {
+					'0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+					'50%': { transform: 'translateY(-10px) rotate(2deg)' }
+				},
+				'float': {
+					'0%, 100%': { transform: 'translateY(0px)' },
+					'50%': { transform: 'translateY(-5px)' }
+				},
+				'bubble': {
+					'0%': { transform: 'translateY(100vh) scale(0)', opacity: '0' },
+					'10%': { opacity: '1' },
+					'90%': { opacity: '1' },
+					'100%': { transform: 'translateY(-10vh) scale(1)', opacity: '0' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'swim': 'swim 4s ease-in-out infinite',
+				'float': 'float 3s ease-in-out infinite',
+				'bubble': 'bubble 8s linear infinite'
 			}
 		}
 	},

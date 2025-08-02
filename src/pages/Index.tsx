@@ -1,11 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import WhaleGame from '@/components/WhaleGame';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="min-h-screen bg-ocean-deep flex flex-col items-center justify-center p-4">
+      <div className="text-center mb-8 space-y-4">
+        <h1 className="text-5xl font-bold text-foreground mb-2">
+          Jogo da Baleia Migratória
+        </h1>
+        <p className="text-xl text-muted-foreground max-w-2xl">
+          Use as setas do teclado para controlar sua baleia e explore as profundezas do oceano
+        </p>
+        <div className="flex justify-center gap-4 text-sm text-accent">
+          <span>⬅️➡️ Movimento horizontal</span>
+          <span>⬅️⬇️ Movimento vertical</span>
+        </div>
+      </div>
+      
+      <WhaleGame className="flex justify-center" />
+      
+      <div className="mt-8 text-center text-muted-foreground text-sm">
+        <p>Construído com Phaser 3 e React</p>
       </div>
     </div>
   );
