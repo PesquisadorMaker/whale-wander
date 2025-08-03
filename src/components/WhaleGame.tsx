@@ -302,6 +302,9 @@ class GameScene extends Phaser.Scene {
     this.energy = Math.max(0, this.energy - 10); // Reduced from 15
     this.game.events.emit('energyUpdate', this.energy);
     
+    // Reset whale position to start
+    this.resetWhalePosition();
+    
     // Visual feedback
     whale.setTint(0xff0000);
     this.time.delayedCall(200, () => whale.clearTint());
@@ -314,6 +317,9 @@ class GameScene extends Phaser.Scene {
   hitPredator(whale: Phaser.Physics.Arcade.Sprite, predator: Phaser.Physics.Arcade.Sprite) {
     this.energy = Math.max(0, this.energy - 12); // Reduced from 20
     this.game.events.emit('energyUpdate', this.energy);
+    
+    // Reset whale position to start
+    this.resetWhalePosition();
     
     // Visual feedback
     whale.setTint(0xff0000);
@@ -339,6 +345,23 @@ class GameScene extends Phaser.Scene {
   gameOver() {
     this.physics.pause();
     this.game.events.emit('milestone', '💀 Energia esgotada! A baleia precisa descansar...\n\nPressione F5 para tentar novamente.');
+  }
+
+  resetWhalePosition() {
+    // Reset whale to starting position
+    this.whale.setPosition(100, 300);
+    this.whale.setVelocity(0, 0);
+    
+    // Reset all milestones so they can trigger again
+    this.milestones.forEach(milestone => {
+      milestone.triggered = false;
+    });
+    
+    // Show message about returning to start
+    this.game.events.emit('milestone', '💥 Colisão! A baleia voltou ao início da migração...');
+    
+    // Update current zone
+    this.currentZone = 0;
   }
 
   checkNearestCoral() {
@@ -604,7 +627,7 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
         <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground border border-accent/20">
           <div>🎮 Setas: Mover | A: Interagir com corais</div>
           <div>🐟 Colete cardumes para recuperar energia (+30)</div>
-          <div>⚠️ Evite navios (-10) e predadores (-12)</div>
+          <div>⚠️ Colisão com navios (-10) ou predadores (-12) = Volta ao início!</div>
           <div>💚 Energia se regenera naturalmente ao longo do tempo</div>
         </div>
       </div>
