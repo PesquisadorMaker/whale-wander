@@ -117,7 +117,7 @@ class GameScene extends Phaser.Scene {
 
     // Create the whale with physics
     this.whale = this.physics.add.sprite(100, 300, 'whale');
-    this.whale.setScale(0.8);
+    this.whale.setScale(0.25); // Reduced to 1/3 of original size
     this.whale.setCollideWorldBounds(true);
 
     // Set up collisions
@@ -493,7 +493,7 @@ class GameScene extends Phaser.Scene {
       if (this.whale.getData('swimming')) {
         this.whale.setData('swimming', false);
         this.tweens.killTweensOf(this.whale);
-        this.whale.setScale(0.8);
+        this.whale.setScale(0.25); // Maintain reduced size
       }
     }
 
