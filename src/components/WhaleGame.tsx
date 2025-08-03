@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import Phaser from 'phaser';
 import whaleSprite from '@/assets/whale.png';
 import coralSprite from '@/assets/coral.png';
+import shipSprite from '@/assets/ship.png';
+import sharkSprite from '@/assets/shark.png';
+import fishSchoolSprite from '@/assets/fish-school.png';
 import brazilWaters from '@/assets/brazil-waters.png';
 import atlanticWaters from '@/assets/atlantic-waters.png';
 import africaWaters from '@/assets/africa-waters.png';
@@ -10,6 +13,7 @@ import indonesiaWaters from '@/assets/indonesia-waters.png';
 import australiaWaters from '@/assets/australia-waters.png';
 import MiniMap from './MiniMap';
 import InfoBalloon from './InfoBalloon';
+import EnergyBar from './EnergyBar';
 
 interface WhaleGameProps {
   className?: string;
@@ -28,6 +32,17 @@ class GameScene extends Phaser.Scene {
   private totalDistance = 12000; // Total migration distance in pixels
   private milestones: { distance: number; message: string; triggered: boolean }[] = [];
   private coralInfo: { [key: string]: { name: string; info: string; country: string } } = {};
+  
+  // Energy system
+  private energy = 100;
+  private maxEnergy = 100;
+  private energyDecayRate = 0.02; // Energy lost per second
+  private lastUpdateTime = 0;
+  
+  // Obstacles and collectibles
+  private ships!: Phaser.Physics.Arcade.Group;
+  private predators!: Phaser.Physics.Arcade.Group;
+  private fishSchools!: Phaser.Physics.Arcade.Group;
   
   // Zones configuration
   private zones = [
@@ -68,6 +83,9 @@ class GameScene extends Phaser.Scene {
     // Load sprites and backgrounds
     this.load.image('whale', whaleSprite);
     this.load.image('coral', coralSprite);
+    this.load.image('ship', shipSprite);
+    this.load.image('shark', sharkSprite);
+    this.load.image('fish-school', fishSchoolSprite);
     this.load.image('brazil-waters', brazilWaters);
     this.load.image('atlantic-waters', atlanticWaters);
     this.load.image('africa-waters', africaWaters);
@@ -86,10 +104,25 @@ class GameScene extends Phaser.Scene {
     // Add corals throughout the journey
     this.createCorals();
 
+    // Create groups for obstacles and collectibles
+    this.ships = this.physics.add.group();
+    this.predators = this.physics.add.group();
+    this.fishSchools = this.physics.add.group();
+
+    // Create obstacles and collectibles
+    this.createShips();
+    this.createPredators();
+    this.createFishSchools();
+
     // Create the whale with physics
     this.whale = this.physics.add.sprite(100, 300, 'whale');
     this.whale.setScale(0.8);
     this.whale.setCollideWorldBounds(true);
+
+    // Set up collisions
+    this.physics.add.overlap(this.whale, this.ships, this.hitObstacle, undefined, this);
+    this.physics.add.overlap(this.whale, this.predators, this.hitPredator, undefined, this);
+    this.physics.add.overlap(this.whale, this.fishSchools, this.collectFish, undefined, this);
     
     // Set up camera to follow whale horizontally
     this.camera = this.cameras.main;
@@ -113,6 +146,9 @@ class GameScene extends Phaser.Scene {
 
     // Add some bubbles for ambiance
     this.createBubbles();
+
+    // Initialize time tracking
+    this.lastUpdateTime = this.time.now;
   }
 
   createBackgrounds() {
@@ -180,6 +216,130 @@ class GameScene extends Phaser.Scene {
     }
   }
 
+  createShips() {
+    // Add ships as moving obstacles
+    const shipPositions = [
+      { x: 800, y: 200, direction: 'horizontal' },
+      { x: 2500, y: 150, direction: 'vertical' },
+      { x: 4800, y: 180, direction: 'horizontal' },
+      { x: 7200, y: 220, direction: 'vertical' },
+      { x: 9500, y: 160, direction: 'horizontal' },
+      { x: 11000, y: 190, direction: 'vertical' }
+    ];
+
+    shipPositions.forEach(pos => {
+      const ship = this.physics.add.sprite(pos.x, pos.y, 'ship');
+      ship.setScale(0.6);
+      ship.setData('direction', pos.direction);
+      ship.setData('initialY', pos.y);
+      ship.setData('initialX', pos.x);
+      this.ships.add(ship);
+
+      // Set initial velocity
+      if (pos.direction === 'horizontal') {
+        ship.setVelocityX(50);
+      } else {
+        ship.setVelocityY(30);
+      }
+    });
+  }
+
+  createPredators() {
+    // Add predators (sharks) that patrol areas
+    const predatorPositions = [
+      { x: 1200, y: 400, patrolStart: 1000, patrolEnd: 1400 },
+      { x: 3500, y: 450, patrolStart: 3200, patrolEnd: 3800 },
+      { x: 6000, y: 420, patrolStart: 5800, patrolEnd: 6200 },
+      { x: 8800, y: 460, patrolStart: 8500, patrolEnd: 9100 },
+      { x: 10800, y: 440, patrolStart: 10500, patrolEnd: 11100 }
+    ];
+
+    predatorPositions.forEach(pos => {
+      const predator = this.physics.add.sprite(pos.x, pos.y, 'shark');
+      predator.setScale(0.7);
+      predator.setData('patrolStart', pos.patrolStart);
+      predator.setData('patrolEnd', pos.patrolEnd);
+      predator.setData('direction', 1);
+      predator.setVelocityX(80);
+      this.predators.add(predator);
+    });
+  }
+
+  createFishSchools() {
+    // Add fish schools as energy sources
+    const fishPositions = [
+      { x: 600, y: 350 },
+      { x: 1800, y: 380 },
+      { x: 2800, y: 320 },
+      { x: 4200, y: 360 },
+      { x: 5500, y: 340 },
+      { x: 6800, y: 370 },
+      { x: 8200, y: 330 },
+      { x: 9600, y: 350 },
+      { x: 10900, y: 380 },
+      { x: 11500, y: 340 }
+    ];
+
+    fishPositions.forEach(pos => {
+      const fishSchool = this.physics.add.sprite(pos.x, pos.y, 'fish-school');
+      fishSchool.setScale(0.8);
+      this.fishSchools.add(fishSchool);
+
+      // Add floating animation
+      this.tweens.add({
+        targets: fishSchool,
+        y: fishSchool.y - 15,
+        duration: 2000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    });
+  }
+
+  hitObstacle(whale: Phaser.Physics.Arcade.Sprite, ship: Phaser.Physics.Arcade.Sprite) {
+    this.energy = Math.max(0, this.energy - 15);
+    this.game.events.emit('energyUpdate', this.energy);
+    
+    // Visual feedback
+    whale.setTint(0xff0000);
+    this.time.delayedCall(200, () => whale.clearTint());
+    
+    if (this.energy <= 0) {
+      this.gameOver();
+    }
+  }
+
+  hitPredator(whale: Phaser.Physics.Arcade.Sprite, predator: Phaser.Physics.Arcade.Sprite) {
+    this.energy = Math.max(0, this.energy - 20);
+    this.game.events.emit('energyUpdate', this.energy);
+    
+    // Visual feedback
+    whale.setTint(0xff0000);
+    this.time.delayedCall(300, () => whale.clearTint());
+    
+    if (this.energy <= 0) {
+      this.gameOver();
+    }
+  }
+
+  collectFish(whale: Phaser.Physics.Arcade.Sprite, fishSchool: Phaser.Physics.Arcade.Sprite) {
+    this.energy = Math.min(this.maxEnergy, this.energy + 25);
+    this.game.events.emit('energyUpdate', this.energy);
+    
+    // Visual feedback
+    whale.setTint(0x00ff00);
+    this.time.delayedCall(200, () => whale.clearTint());
+    
+    // Remove fish school
+    fishSchool.destroy();
+  }
+
+  gameOver() {
+    this.physics.pause();
+    this.game.events.emit('milestone', '💀 Energia esgotada! A baleia precisa descansar...\n\nPressione F5 para tentar novamente.');
+  }
+
   checkNearestCoral() {
     let minDistance = Infinity;
     let nearest: Phaser.GameObjects.Image | null = null;
@@ -242,6 +402,22 @@ class GameScene extends Phaser.Scene {
   }
 
   update() {
+    // Update energy over time
+    const currentTime = this.time.now;
+    if (currentTime - this.lastUpdateTime > 1000) { // Update every second
+      this.energy = Math.max(0, this.energy - this.energyDecayRate * 1000);
+      this.game.events.emit('energyUpdate', this.energy);
+      this.lastUpdateTime = currentTime;
+      
+      if (this.energy <= 0) {
+        this.gameOver();
+        return;
+      }
+    }
+
+    // Update moving obstacles
+    this.updateObstacles();
+
     // Reset movement state
     this.isMoving = false;
 
@@ -306,6 +482,35 @@ class GameScene extends Phaser.Scene {
       totalDistance: this.totalDistance
     });
   }
+
+  updateObstacles() {
+    // Update ships
+    this.ships.children.entries.forEach((ship: any) => {
+      const direction = ship.getData('direction');
+      
+      if (direction === 'horizontal') {
+        if (ship.x > ship.getData('initialX') + 200 || ship.x < ship.getData('initialX') - 200) {
+          ship.setVelocityX(-ship.body.velocity.x);
+        }
+      } else {
+        if (ship.y > ship.getData('initialY') + 100 || ship.y < ship.getData('initialY') - 100) {
+          ship.setVelocityY(-ship.body.velocity.y);
+        }
+      }
+    });
+
+    // Update predators
+    this.predators.children.entries.forEach((predator: any) => {
+      const patrolStart = predator.getData('patrolStart');
+      const patrolEnd = predator.getData('patrolEnd');
+      
+      if (predator.x >= patrolEnd || predator.x <= patrolStart) {
+        const currentVel = predator.body.velocity.x;
+        predator.setVelocityX(-currentVel);
+        predator.setFlipX(currentVel > 0);
+      }
+    });
+  }
 }
 
 const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
@@ -315,6 +520,8 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
   const [totalDistance, setTotalDistance] = useState(12000);
   const [balloonMessage, setBalloonMessage] = useState('');
   const [showBalloon, setShowBalloon] = useState(false);
+  const [energy, setEnergy] = useState(100);
+  const [maxEnergy] = useState(100);
 
   useEffect(() => {
     if (gameRef.current && !phaserGameRef.current) {
@@ -346,6 +553,10 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
         setBalloonMessage(message);
         setShowBalloon(true);
       });
+
+      phaserGameRef.current.events.on('energyUpdate', (newEnergy: number) => {
+        setEnergy(newEnergy);
+      });
     }
 
     return () => {
@@ -363,6 +574,8 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
   return (
     <div className={className}>
       <div className="relative">
+        <EnergyBar energy={energy} maxEnergy={maxEnergy} />
+        
         <div 
           ref={gameRef} 
           className="border-2 border-accent rounded-lg overflow-hidden shadow-2xl"
@@ -379,6 +592,12 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
           isVisible={showBalloon}
           onClose={handleBalloonClose}
         />
+
+        <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground border border-accent/20">
+          <div>🎮 Setas: Mover | A: Interagir com corais</div>
+          <div>🐟 Colete cardumes para recuperar energia</div>
+          <div>⚠️ Evite navios e predadores</div>
+        </div>
       </div>
     </div>
   );
