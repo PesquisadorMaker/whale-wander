@@ -36,7 +36,8 @@ class GameScene extends Phaser.Scene {
   // Energy system
   private energy = 100;
   private maxEnergy = 100;
-  private energyDecayRate = 0.02; // Energy lost per second
+  private energyDecayRate = 0.005; // Energy lost per second (reduced from 0.02)
+  private energyGainRate = 0.008; // Energy gained per second over time
   private lastUpdateTime = 0;
   
   // Obstacles and collectibles
@@ -298,7 +299,7 @@ class GameScene extends Phaser.Scene {
   }
 
   hitObstacle(whale: Phaser.Physics.Arcade.Sprite, ship: Phaser.Physics.Arcade.Sprite) {
-    this.energy = Math.max(0, this.energy - 15);
+    this.energy = Math.max(0, this.energy - 10); // Reduced from 15
     this.game.events.emit('energyUpdate', this.energy);
     
     // Visual feedback
@@ -311,7 +312,7 @@ class GameScene extends Phaser.Scene {
   }
 
   hitPredator(whale: Phaser.Physics.Arcade.Sprite, predator: Phaser.Physics.Arcade.Sprite) {
-    this.energy = Math.max(0, this.energy - 20);
+    this.energy = Math.max(0, this.energy - 12); // Reduced from 20
     this.game.events.emit('energyUpdate', this.energy);
     
     // Visual feedback
@@ -324,7 +325,7 @@ class GameScene extends Phaser.Scene {
   }
 
   collectFish(whale: Phaser.Physics.Arcade.Sprite, fishSchool: Phaser.Physics.Arcade.Sprite) {
-    this.energy = Math.min(this.maxEnergy, this.energy + 25);
+    this.energy = Math.min(this.maxEnergy, this.energy + 30); // Increased from 25
     this.game.events.emit('energyUpdate', this.energy);
     
     // Visual feedback
@@ -405,7 +406,14 @@ class GameScene extends Phaser.Scene {
     // Update energy over time
     const currentTime = this.time.now;
     if (currentTime - this.lastUpdateTime > 1000) { // Update every second
-      this.energy = Math.max(0, this.energy - this.energyDecayRate * 1000);
+      // Gradual energy gain over time (whale recovers naturally)
+      this.energy = Math.min(this.maxEnergy, this.energy + this.energyGainRate * 1000);
+      
+      // Only lose energy if moving (swimming effort)
+      if (this.isMoving) {
+        this.energy = Math.max(0, this.energy - this.energyDecayRate * 1000);
+      }
+      
       this.game.events.emit('energyUpdate', this.energy);
       this.lastUpdateTime = currentTime;
       
@@ -595,8 +603,9 @@ const WhaleGame: React.FC<WhaleGameProps> = ({ className }) => {
 
         <div className="absolute bottom-4 left-4 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs text-muted-foreground border border-accent/20">
           <div>🎮 Setas: Mover | A: Interagir com corais</div>
-          <div>🐟 Colete cardumes para recuperar energia</div>
-          <div>⚠️ Evite navios e predadores</div>
+          <div>🐟 Colete cardumes para recuperar energia (+30)</div>
+          <div>⚠️ Evite navios (-10) e predadores (-12)</div>
+          <div>💚 Energia se regenera naturalmente ao longo do tempo</div>
         </div>
       </div>
     </div>
